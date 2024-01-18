@@ -8,3 +8,10 @@ class beacon:
     d_to_user=0
     d_2D=0
     z=0
+
+
+class Person:
+    def __init__(self, id, x, y):
+        self.id = id
+        self.x = x
+        self.y = y

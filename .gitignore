@@ -4,3 +4,4 @@ utility/
 .venv/
 .DS_Store
 __pycache__/
+*.pt

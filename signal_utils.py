@@ -6,6 +6,7 @@ import time
 import requests as re
 import numpy as np
 from scipy.optimize import least_squares
+import matplotlib.pyplot as plt
 from trilateration import *
 from plot import *
 
@@ -74,7 +75,7 @@ def d_from_rssi(rssi, beacon):
     distance = np.power(10,((beacon.power_ref - rssi)/(10*N)))
     return distance
 
-def loop_signal(iterations: int, list_beacons: 'list[beacon]', last_values, current_position=False):
+def loop_signal(iterations: int, list_beacons: 'list[beacon]', last_values, current_position=False, plot=True):
     positions_list=np.array([]).reshape(0,2)
     print("Here we go")
     n_beacons=len(list_beacons)
@@ -83,8 +84,9 @@ def loop_signal(iterations: int, list_beacons: 'list[beacon]', last_values, curr
     if current_position==True:
         x_current=int(input("Enter current x: "))*0.6
         y_current=int(input("Enter current y: "))*0.6
-    plt.ion()  # turn on interactive mode
-    plt.figure()
+    if plot==True:
+        plt.ion()  # turn on interactive mode
+        plt.figure()
     signal=np.array([]).reshape(0,n_beacons)
     signal_no_filter=np.array([]).reshape(0,n_beacons)
     instant_values=np.zeros((0,n_beacons))
@@ -119,12 +121,13 @@ def loop_signal(iterations: int, list_beacons: 'list[beacon]', last_values, curr
         x_weight,y_weight=locate_weight(three_selected_beacons[0],three_selected_beacons[1],three_selected_beacons[2])
 
 
-
-        plot_room([x, y],[x_weight,y_weight],three_selected_beacons[0],three_selected_beacons[1],three_selected_beacons[2],x_current,y_current)
+        if plot==True:
+            plot_room_ble([x, y],[x_weight,y_weight],three_selected_beacons[0],three_selected_beacons[1],three_selected_beacons[2],x_current,y_current)
         time.sleep(0.1)  # pause for 1 second
 
-    plt.ioff()  # turn off interactive mode
-    plt.show()
+    if plot==True:
+        plt.ioff()  # turn off interactive mode
+        plt.show()
     return signal, signal_no_filter, positions_list
 
 
@@ -187,5 +190,4 @@ def init_loop(list_beacons: 'list[beacon]'):
 
 def select_three(list_beacons: 'list[beacon]'):
     selected_beacons=sorted(list_beacons,key=lambda x: x.d_to_user)[:3]
-    print(f"The three selected beacons are {selected_beacons}.")
     return selected_beacons

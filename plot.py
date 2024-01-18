@@ -9,9 +9,10 @@ from signal_utils import *
 room_width = 7
 room_length = 10
 ceiling_height=1.5
+FAN_POSITION=(9,4)
 
 
-def plot_room(position, position_weight, b1: beacon, b2: beacon, b3: beacon, x_current=0,y_current=0):
+def plot_room_ble(position, position_weight, b1: beacon, b2: beacon, b3: beacon, x_current=0,y_current=0):
     """Plot the room and position of the marker."""
     plt.clf()  # clear the figure
 
@@ -60,3 +61,5 @@ def plot_signal(signal, signal_no_filter, n_measurement):
         fig.update_xaxes(title_text="Time (s)", row=2, col=1)
         fig.update_yaxes(title_text="Distance (m)", row=2, col=1)
         fig.show()
+
+
