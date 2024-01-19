@@ -14,16 +14,6 @@ from plot import *
 
 
 
-# Room dimensions
-
-
-def post_data(x: float, y: float):
-    url="http://flask-env.eba-ekqu9gni.us-east-2.elasticbeanstalk.com/send_data"
-    payload= {
-        'x':x,
-        'y':y
-    }
-    re.post(url,json=payload)
 
 #---MAIN---
 

@@ -12,16 +12,11 @@ import cvzone
 import threading
 from concurrent.futures import ThreadPoolExecutor
 import threading
-from locate_user import *
+from locate_user_ble import *
 
-
+from constants import FAN_POSITION
 
 #DEFINE CONSTANTS
-camera_position = (2.5, 15.5)
-room_width = 12
-room_length = 17
-ceiling_height=1.75
-FAN_POSITION=(7,14)
 YOLO_VERBOSE=False
 
 H_rest=np.array([[-6.79628864e+00, -5.71232480e+00,  8.79272192e+02],
@@ -162,7 +157,6 @@ def locate_from_homography(bboxes,frame,keypoints,ids,verbose=False):
         
         X,Y=apply_homography(np.array([middle_x,middle_y]),choose_h(middle_x,middle_y,sitting=sitting_bool)) # Apply the correct homography depending on posture
         
-        #X,Y=transform_coords(X,Y,camera_position)
         
         cv2.putText(frame, "("+str(np.around(X,1))+","+str(np.around(Y,1))+")", (x2+10, y2), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2) # Display coordinates
         cv2.putText(frame, "Sitting" if sitting_bool else "Standing", (int((x1+x2)/2), int(y2)+10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2) # Display posture
