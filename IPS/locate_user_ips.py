@@ -15,7 +15,13 @@ import threading
 from locate_user_ble import *
 
 from constants import FAN_POSITION
+from beacon import Person
 
+camera_position = (2.5, 15.5)
+room_width = 12
+room_length = 17
+ceiling_height=1.75
+FAN_POSITION=(7,14)
 #DEFINE CONSTANTS
 YOLO_VERBOSE=False
 
@@ -143,7 +149,7 @@ def locate_from_homography(bboxes,frame,keypoints,ids,verbose=False):
     positions=[]
     persons=[]
     if (len(ids)==0):
-        return frame
+        return frame,persons
     if verbose:
         print("Found users:")
     for i,bbox in enumerate(bboxes): # Access all the bounding boxes for each user
@@ -165,7 +171,8 @@ def locate_from_homography(bboxes,frame,keypoints,ids,verbose=False):
             print(f"Id: {ids[i]}, position: {X,Y}")
         
         positions.append((X,Y))
-        persons.append((ids[i],X,Y))
+        persons.append(Person(ids[i],x=X,y=Y))
+        #persons.append((ids[i],X,Y))
     
     return frame,persons
 
@@ -187,17 +194,18 @@ def plot_room(persons,ble_position=None):
     plt.clf()  # clear the figure
 
     #Display fan position
+    plt.gca().add_patch(plt.Rectangle((0, 0), room_width, room_length, fill=None))
     plt.scatter(room_width-FAN_POSITION[0],FAN_POSITION[1], color='brown')
     plt.text(int(room_width-FAN_POSITION[0]), int(FAN_POSITION[1]), "FAN", fontsize=9, ha='right', va='bottom')
     # Plot the room as a rectangle
-    plt.gca().add_patch(plt.Rectangle((0, 0), room_width, room_length, fill=None))
+    
     colors = ['red', 'green', 'yellow', 'purple','black'] 
     # Plot the current position of the marker
     for person, color in zip(persons,colors):
-        X=room_width-person[1]
-        Y=person[2]
+        X=room_width-person.x
+        Y=person.y
         plt.scatter(X,Y, color=color)
-        plt.text(int(X), int(Y), person[0], fontsize=9, ha='right', va='bottom')
+        plt.text(int(X), int(Y), person.id, fontsize=9, ha='right', va='bottom')
 
     if ble_position is not None:
         plt.scatter(room_width-ble_position[0],ble_position[1],color='blue')
@@ -235,7 +243,7 @@ def d_points(x1,y1,x2,y2):
     return np.sqrt((x2-x1)**2+(y2-y1)**2)
 
 def closest_person(persons, position):
-    return min(persons, key=lambda f: d_points(f[1],f[2],position[0],position[1]))
+    return min(persons, key=lambda f: d_points(f.x,f.y,position[0],position[1]))
 
 
 def fetch_image(client_socket, data, payload_size):
@@ -257,7 +265,7 @@ def fetch_image(client_socket, data, payload_size):
 
 def locate_now(frame,plot=True):
 
-    results = model.track(frame, tracker="tracker_modified.yaml",persist=True)
+    results = model.track(frame, tracker="tracker_modified.yaml",persist=True, verbose=False)
     #detections, frame=plot_boxes(results,frame)
     bboxes = results[0].boxes.xyxy.tolist() #Accessing the bounding boxes
 
@@ -283,7 +291,8 @@ def mv_positioning(shared_data, plot=False):
         persons=locate_now(frame,plot=plot)
         if shared_data is not None:
             shared_data['MV']= persons
-        #plot_room(persons)
+        if plot==True:
+            plot_room(persons)
         if cv2.waitKey(1) == ord('q'): #Press Q to quit
             break
     client_socket.close()
@@ -291,25 +300,16 @@ def mv_positioning(shared_data, plot=False):
 # Connect to the Raspberry Pi server
 def init_connect_fan():
     client_socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket2.connect(('192.168.137.77', 12346))  
+    client_socket2.connect(('192.168.137.32', 12346))  
     return client_socket2
 # Send a message
 
-def send_to_fan(person):
-    #We define 0 as angle of fan pointing in direction of x-axis
-    print(f"Trying to divide {person[2]} by {person[1]}")
-    angle_to_send=np.rad2deg(np.arcsin((person[2]-FAN_POSITION[1])/(person[1]-FAN_POSITION[0])))+180 #Angle between 0 and 360
-    print(f"Following person {person[0]} and giving direction {angle_to_send}")
+
 
 def match_id(shared_data):
     matched= closest_person(shared_data['MV'],shared_data['BLE'])
     print(f'A match has been found with person {matched}')
     return matched
-
-def follow(person_to_follow):
-    while True:
-        send_to_fan(person=person_to_follow)
-        time.sleep(3)
 
 
     

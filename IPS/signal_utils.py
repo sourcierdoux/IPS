@@ -11,8 +11,7 @@ from trilateration import *
 from plot import *
 
 
-N=2.4
-power_ref=-49
+N=2.5
 
 def kalman_block(x, P, s, A, H, Q, R):
 
@@ -77,7 +76,6 @@ def d_from_rssi(rssi, beacon):
 
 def loop_signal(iterations: int, list_beacons: 'list[beacon]', last_values, current_position=False, plot=True):
     positions_list=np.array([]).reshape(0,2)
-    print("Here we go")
     n_beacons=len(list_beacons)
     x_current=0
     y_current=0
@@ -97,8 +95,8 @@ def loop_signal(iterations: int, list_beacons: 'list[beacon]', last_values, curr
 
         signal_no_filter=np.append(signal_no_filter,instant_values.reshape(1,n_beacons),axis=0)
         last_values=signal_kalman_filter
-        print("\nFiltered RSSI:")
-        print(signal_kalman_filter)
+        #print("\nFiltered RSSI:")
+        #print(signal_kalman_filter)
 
 
         signal=np.append(signal,signal_kalman_filter.reshape(1,n_beacons),axis=0)
@@ -110,12 +108,10 @@ def loop_signal(iterations: int, list_beacons: 'list[beacon]', last_values, curr
 
         run_hypot(three_selected_beacons)
 
-        #print("\nDistances are: ")
-        #print(b1.d_2D,b2.d_2D,b3.d_2D)
         distances = np.array([b.d_2D for b in three_selected_beacons])
         x,y=select_case(three_selected_beacons[0],three_selected_beacons[1],three_selected_beacons[2])
-        print("\nCurrent position is:")
-        print(x,y)
+        #print("\nCurrent position is:")
+        #print(x,y)
         positions_list=np.append(positions_list,[(x,y)],axis=0)
         #x_square, y_square=locate_square(b1,b2,b3,distances)
         x_weight,y_weight=locate_weight(three_selected_beacons[0],three_selected_beacons[1],three_selected_beacons[2])
@@ -131,7 +127,14 @@ def loop_signal(iterations: int, list_beacons: 'list[beacon]', last_values, curr
     return signal, signal_no_filter, positions_list
 
 
-async def discover(list_beacons: 'list[beacon]'):
+async def discover(list_beacons):
+    distance_list=[]
+    for beacon in list_beacons:
+        device = await BleakScanner.find_device_by_address(beacon.address)
+        distance_list.append(device.rssi)
+    return np.array(distance_list)
+
+"""async def discover(list_beacons: 'list[beacon]'):
     found_devices={beacon.address:None for beacon in list_beacons}
     def detection_callback(device, advertisement_data):
         if device.address in found_devices:
@@ -145,12 +148,12 @@ async def discover(list_beacons: 'list[beacon]'):
     distance_list=[found_devices[beacon.address] if found_devices[beacon.address] is not None else 0 for beacon in list_beacons]
     #print("\nDistance to device 1: "+str(b1d))   
     #print("\nDistance to device 3: "+str(b3d))
-    return np.array(distance_list)
+    return np.array(distance_list)"""
 
 def run_discover_mean(list_beacons: 'list[beacon]'):
     n_beacons=len(list_beacons)
     array_average=np.array([]).reshape(0,n_beacons)
-    for i in range(0,1):
+    for i in range(0,2):
         value=np.zeros((1,n_beacons))
         while np.any(value >= 0):
             value=asyncio.run(discover(list_beacons)).reshape(1,n_beacons)
@@ -172,7 +175,6 @@ def run_hypot(beacon_list: 'list[beacon]'):
 
 def init_loop(list_beacons: 'list[beacon]'):
     n_beacons=len(list_beacons)
-    print("initializing")
     signal=np.array([]).reshape(0,n_beacons)
     signal_no_filter=np.array([]).reshape(0,n_beacons)
     last_values=run_discover_mean(list_beacons=list_beacons)
