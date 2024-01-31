@@ -1,11 +1,14 @@
-from locate_user_ips import *
-from locate_user_ips import mv_positioning, plot_positions
+from locate_user_mv import *
+from locate_user_mv import mv_positioning, plot_positions
 from beacon import Person
-from fan import *
-
+import sys
+#sys.path.append('/Users/guillaumelecronier/Library/Python/3.9/bin')
+#sys.path.append('/Users/guillaumelecronier/anaconda3/lib/python3.11/site-packages')
 from flask import Flask, render_template_string, request, redirect, url_for
 import threading
 import time
+import sys
+from fingerprint.locate_fingerprint import *
 
 app = Flask(__name__)
 
@@ -34,7 +37,7 @@ def increase():
 @app.route('/decrease', methods=['POST'])
 def decrease():
     global fan_speed
-    if fan_speed>1:
+    if fan_speed>0:
         fan_speed -= 1
         speed_change()
     return redirect(url_for('index'))
@@ -58,30 +61,37 @@ def send_to_fan_speed():
 def follow(shared_data,first_position,client_socket2):
     
     while True:
-        id = first_position.id
-        person_to_follow=next(filter(lambda x: x.id==id,shared_data['MV']))
+        if any(person.id == first_position.id for person in shared_data['MV']):
+            person_to_follow=next(filter(lambda x: x.id==first_position.id,shared_data['MV']))
+        else:
+            new_id=match_id(shared_data=shared_data)
+            first_position.id=new_id.id
         first_angle=np.rad2deg(np.arctan2((first_position.y-FAN_POSITION[1]),(first_position.x-FAN_POSITION[0])))%360
         angle_to_person=np.rad2deg(np.arctan2((person_to_follow.y-FAN_POSITION[1]),(person_to_follow.x-FAN_POSITION[0])))%360
         print(f"first angle {first_angle}")
         print(f'angle to follow {angle_to_person}')
-        if np.abs(first_angle-angle_to_person)>10:
+        if np.abs(first_angle-angle_to_person)>7:
             send_to_fan(person=person_to_follow,client_socket2=client_socket2)
             first_position=person_to_follow
-        time.sleep(3)
+        time.sleep(5)
+
+        
 
 def speed_change():
     print("detected speed change")
     send_to_fan_speed()
 
-def tracking_full():
+def tracking_full(ble_ips='trilateration'):
     shared_data={}
     first_position=np.array([]).reshape(0,3)
     global client_socket2
     client_socket2=init_connect_fan()
     #threading.Thread(target=locate_ble, args=(shared_data,), daemon=True).start()  
     thread_mv=threading.Thread(target=mv_positioning, args=(shared_data,False),daemon=True)
-    thread_ble=threading.Thread(target=locate_ble, args=(shared_data,),daemon=True)
-    
+    if ble_ips=='trilateration':
+        thread_ble=threading.Thread(target=locate_ble, args=(shared_data,),daemon=True)
+    elif ble_ips=='fingerprinting':
+        thread_ble=threading.Thread(target=locate_fingerprint, args=(shared_data,),daemon=True)
     thread_mv.start()
     thread_ble.start()
 
@@ -102,22 +112,21 @@ def tracking_full():
     
     #client_socket2.close()
 
-def main():
-    #mv_positioning(shared_data=None,plot=True)
-    """current_x,current_y=9,5
-    positions_list=np.array([]).reshape(0,2)
-    for n,i in enumerate(range (0,5)):
-        print(f"Measurement {n+1} of 100")
-        position_x,position_y=locate_ble(shared_data=None,plot=False,n_measurement=10,current_position=False)
-        positions_list=np.append(positions_list,[(position_x,position_y)],axis=0)
-        
-    
-    errors=np.sqrt((current_x-positions_list[0])**2+(current_y-positions_list[1])**2)
-    error=np.mean(errors,axis=0)
-    np.savetxt('errors.txt',positions_list,delimiter=',', fmt='%f')
-    print(f"Average error: {error}")"""
-    #tracking_full()
-    locate_ble(plot=True,shared_data=None,current_position=True)
 
+
+def main():
+    #mv_positioning(shared_data=None,plot=True) #MV positioning only
+    #locate_fingerprint(shared_data=None,plot_final=True) #Fingerprinting positioning only
+    #locate_ble(plot=False,shared_data=None,current_position=False,final_plot=True, n_measurement=10) #BLE trilateration only
+    
+    #Uncomment next line for enabling all system (requiring running Pi scripts as well)
+    tracking_full(ble_ips='fingerprinting') 
+
+
+    #Next lines are for evaluation of positioning errors
+    #evaluate_trilateration_error(file=True)
+    #evaluate_fingerprint_error(file=True)
+    #dict=evaluate_mv_error(current_x=10,current_y=11)
+    
 if __name__=="__main__":
     main()

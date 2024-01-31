@@ -5,3 +5,9 @@ utility/
 .DS_Store
 __pycache__/
 *.pt
+IPS/errors.txt
+*.png
+*.csv
+*.txt
+*.jpg
+.ipynb_checkpoints/

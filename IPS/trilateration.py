@@ -235,8 +235,17 @@ def select_case(b1: beacon, b2: beacon, b3: beacon):
     
     
     if any_contained(b1,b2,b3):
-        print("one circle is contained within another")
-        return 0,0
+        x,y=0,0
+        smallest_beacon_1, smallest_beacon_2, large_beacon= sort_beacons_by_b_2D(b1, b2, b3)
+        while any_contained(smallest_beacon_1,smallest_beacon_2,large_beacon) and large_beacon.d_2D>0:
+            large_beacon.d_2D-=0.5
+            print(large_beacon.d_2D)
+        else:
+            if any_contained(smallest_beacon_1,smallest_beacon_2,large_beacon):
+                return 0,0
+            else:
+                x,y=select_case(smallest_beacon_1,smallest_beacon_2,large_beacon)
+            return x,y
 
 def locate_specific_case(b1: beacon, b2: beacon, b3: beacon):
     #b3 should be the small circle

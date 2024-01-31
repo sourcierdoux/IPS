@@ -6,8 +6,8 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from signal_utils import *
 
-room_width = 7
-room_length = 10
+room_width = 8
+room_length = 11
 ceiling_height=1.5
 FAN_POSITION=(9,4)
 
@@ -15,26 +15,25 @@ FAN_POSITION=(9,4)
 def plot_room_ble(position, position_weight, b1: beacon, b2: beacon, b3: beacon, x_current=0,y_current=0):
     """Plot the room and position of the marker."""
     plt.clf()  # clear the figure
-
     # Plot the room as a rectangle
     plt.gca().add_patch(plt.Rectangle((0, 0), room_width, room_length, fill=None))
 
     if x_current!=0 and y_current !=0:
         error=np.sqrt((x_current-position[0])**2+(y_current-position[1])**2)
-        plt.scatter(x=x_current,y=room_length-y_current, color='green')   
+        plt.scatter(x=room_width-x_current,y=y_current, color='green')   
         plt.text(x_current + 0.5, y_current, f'Error={str(error)}', fontsize=10)
     # Plot the current position of the marker
-    plt.scatter(np.array([b1.x,b2.x,b3.x]),np.array(np.array([room_length,room_length,room_length])-[b1.y,b2.y,b3.y]),color='purple')
-    position[1]=room_length-position[1]
+    plt.scatter(np.array(np.array([room_width,room_width,room_width])-[b1.x,b2.x,b3.x]),np.array([b1.y,b2.y,b3.y]),color='purple')
+    position[0]=room_width-position[0]
     plt.scatter(*position, color='red')
 
     #position_square[1]=room_length-position_square[1]
-    position_weight[1]=room_length-position_weight[1]
+    position_weight[0]=room_width-position_weight[0]
     #plt.scatter(*position_square, color='green')
     plt.scatter(*position_weight, color='yellow')
 
     for beacon in [b1, b2, b3]:
-        circle = Circle((beacon.x, room_length - beacon.y), beacon.d_2D, color='blue', fill=False)
+        circle = Circle((room_width-beacon.x, beacon.y), beacon.d_2D, color='blue', fill=False)
         plt.gca().add_patch(circle)
 
     plt.xlim(0, room_width)

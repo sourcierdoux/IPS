@@ -7,13 +7,11 @@ import torch
 import numpy as np
 from ultralytics import YOLO
 import matplotlib.pyplot as plt
-from deep_sort_realtime.deepsort_tracker import DeepSort
-import cvzone
 import threading
 from concurrent.futures import ThreadPoolExecutor
 import threading
 from locate_user_ble import *
-
+import pandas as pd
 from constants import FAN_POSITION
 from beacon import Person
 
@@ -21,7 +19,7 @@ camera_position = (2.5, 15.5)
 room_width = 12
 room_length = 17
 ceiling_height=1.75
-FAN_POSITION=(7,14)
+FAN_POSITION=(7,14.5)
 #DEFINE CONSTANTS
 YOLO_VERBOSE=False
 
@@ -82,6 +80,7 @@ def is_sitting_single(keypoint):
     angle_knee_left=calculate_angle(hips_left,knee_left,foot_left)
     angle_knee_right=calculate_angle(hips_right,knee_right,foot_right)
     #If the person is in profile view, only one side of its body can be seen
+    
     
     if angle_hips_left>160 or angle_hips_right>160: 
         if angle_knee_right>160 or angle_knee_left>160:
@@ -265,7 +264,7 @@ def fetch_image(client_socket, data, payload_size):
 
 def locate_now(frame,plot=True):
 
-    results = model.track(frame, tracker="tracker_modified.yaml",persist=True, verbose=False)
+    results = model.track(frame, tracker="IPS/tracker_modified.yaml",persist=True, verbose=False)
     #detections, frame=plot_boxes(results,frame)
     bboxes = results[0].boxes.xyxy.tolist() #Accessing the bounding boxes
 
@@ -283,6 +282,23 @@ def locate_now(frame,plot=True):
     
     return persons
 
+def evaluate_mv_error(current_x,current_y):
+    client_socket, data, payload_size = camera_connect()
+    dict={}
+    for i in range(50):
+        
+        frame, data=fetch_image(client_socket=client_socket, data=data, payload_size=payload_size)  
+
+        persons=locate_now(frame,plot=True)
+        plot_room(persons)
+        for person in persons:
+            if person.id not in dict:
+                dict[person.id] = []
+            dict[person.id].append((person.x, person.y))
+
+    df = pd.DataFrame({key: pd.Series(value) for key, value in dict.items()})
+
+    return df
 
 def mv_positioning(shared_data, plot=False):
     client_socket, data, payload_size = camera_connect()

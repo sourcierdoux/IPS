@@ -11,7 +11,7 @@ from trilateration import *
 from plot import *
 
 
-N=2.5
+N=2.4
 
 def kalman_block(x, P, s, A, H, Q, R):
 
@@ -102,10 +102,9 @@ def loop_signal(iterations: int, list_beacons: 'list[beacon]', last_values, curr
         signal=np.append(signal,signal_kalman_filter.reshape(1,n_beacons),axis=0)
         for i,b in enumerate(list_beacons):
             b.d_to_user=d_from_rssi(signal_kalman_filter[i], b) 
-        #print(b1.d_to_user,b2.d_to_user,b3.d_to_user)
+        
 
         three_selected_beacons=select_three(list_beacons)
-
         run_hypot(three_selected_beacons)
 
         distances = np.array([b.d_2D for b in three_selected_beacons])
@@ -115,7 +114,6 @@ def loop_signal(iterations: int, list_beacons: 'list[beacon]', last_values, curr
         positions_list=np.append(positions_list,[(x,y)],axis=0)
         #x_square, y_square=locate_square(b1,b2,b3,distances)
         x_weight,y_weight=locate_weight(three_selected_beacons[0],three_selected_beacons[1],three_selected_beacons[2])
-
 
         if plot==True:
             plot_room_ble([x, y],[x_weight,y_weight],three_selected_beacons[0],three_selected_beacons[1],three_selected_beacons[2],x_current,y_current)
@@ -130,26 +128,12 @@ def loop_signal(iterations: int, list_beacons: 'list[beacon]', last_values, curr
 async def discover(list_beacons):
     distance_list=[]
     for beacon in list_beacons:
-        device = await BleakScanner.find_device_by_address(beacon.address)
-        distance_list.append(device.rssi)
+        device = await BleakScanner.find_device_by_address(beacon.address,timeout=5)
+        if device is not None:
+            distance_list.append(device.rssi)
+        else:
+            distance_list.append(-100)
     return np.array(distance_list)
-
-"""async def discover(list_beacons: 'list[beacon]'):
-    found_devices={beacon.address:None for beacon in list_beacons}
-    def detection_callback(device, advertisement_data):
-        if device.address in found_devices:
-            found_devices[device.address]=advertisement_data.rssi
-    Scanner = BleakScanner(detection_callback=detection_callback)
-    await Scanner.start()
-    await asyncio.sleep(1)  # Scanning for 10 seconds
-    await Scanner.stop()
-    #if device_1==None or device_2==None or device_3==None:
-        #raise Exception("Make sure you are located in the room with all beacons turned on.")
-    distance_list=[found_devices[beacon.address] if found_devices[beacon.address] is not None else 0 for beacon in list_beacons]
-    #print("\nDistance to device 1: "+str(b1d))   
-    #print("\nDistance to device 3: "+str(b3d))
-    return np.array(distance_list)"""
-
 def run_discover_mean(list_beacons: 'list[beacon]'):
     n_beacons=len(list_beacons)
     array_average=np.array([]).reshape(0,n_beacons)
@@ -166,10 +150,11 @@ def run_discover_mean(list_beacons: 'list[beacon]'):
 
 def run_hypot(beacon_list: 'list[beacon]'):
     for b in beacon_list:
-        if ((b.d_to_user<ceiling_height)):
+        b.d_2D=b.d_to_user
+        """if ((b.d_to_user<ceiling_height)):
             b.d_2D=0.2
         else:
-            b.d_2D=np.sqrt(b.d_to_user**2-ceiling_height**2)
+            b.d_2D=np.sqrt(b.d_to_user**2-ceiling_height**2)"""
     
   
 
@@ -180,7 +165,7 @@ def init_loop(list_beacons: 'list[beacon]'):
     last_values=run_discover_mean(list_beacons=list_beacons)
     instant_values=np.zeros((0,n_beacons))
     # Simulate moving the marker in the room
-    for _ in range(5):  # loop 10 times
+    for _ in range(4):  # loop 4 times
         instant_values=run_discover_mean(list_beacons=list_beacons) #Fetch RSSI values
         signal_kalman_filter = kalman_filter(instant_values, last_values, A=1, H=1, Q=1e-3, R=0.01)
 
