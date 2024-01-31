@@ -46,7 +46,7 @@ def plot_room_ble(position, position_weight, b1: beacon, b2: beacon, b3: beacon,
     plt.pause(0.1)  # pause to allow the figure to update
 
 
-def plot_signal(signal, signal_no_filter, n_measurement):
+"""def plot_signal(signal, signal_no_filter, n_measurement):
     distance_array=d_from_rssi(signal)
     for i in range(0,3):
         x_array=np.linspace(0,n_measurement*2,n_measurement)
@@ -59,6 +59,6 @@ def plot_signal(signal, signal_no_filter, n_measurement):
         fig.update_yaxes(title_text="RSSI (dB)", row=1, col=1)
         fig.update_xaxes(title_text="Time (s)", row=2, col=1)
         fig.update_yaxes(title_text="Distance (m)", row=2, col=1)
-        fig.show()
+        fig.show()"""
 
 
