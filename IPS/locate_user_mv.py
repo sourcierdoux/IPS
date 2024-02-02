@@ -23,6 +23,7 @@ FAN_POSITION=(7,14.5)
 #DEFINE CONSTANTS
 YOLO_VERBOSE=False
 
+#Necessary Homography matrices
 H_rest=np.array([[-6.79628864e+00, -5.71232480e+00,  8.79272192e+02],
  [-8.88748261e+00, -1.95484683e+01,  1.65251928e+03],
  [-4.79102185e-01, -8.53511667e-01,  1.00000000e+00]])
@@ -79,9 +80,8 @@ def is_sitting_single(keypoint):
     angle_hips_right=calculate_angle(shoulder_right,hips_right,knee_right)
     angle_knee_left=calculate_angle(hips_left,knee_left,foot_left)
     angle_knee_right=calculate_angle(hips_right,knee_right,foot_right)
+
     #If the person is in profile view, only one side of its body can be seen
-    
-    
     if angle_hips_left>160 or angle_hips_right>160: 
         if angle_knee_right>160 or angle_knee_left>160:
             return False
@@ -179,6 +179,7 @@ def locate_from_homography(bboxes,frame,keypoints,ids,verbose=False):
 
 
 def plot_positions(shared_data):
+    """Main plot of BLE and MV positions simultaneously"""
     while True:
         if 'MV' in shared_data:
             if 'BLE' in shared_data:
@@ -187,29 +188,31 @@ def plot_positions(shared_data):
                 plot_room(shared_data['MV'])
         time.sleep(0.3)
 
+
 def plot_room(persons,ble_position=None):
     #Plot the room and position of the marker.
     
     plt.clf()  # clear the figure
 
-    #Display fan position
-    plt.gca().add_patch(plt.Rectangle((0, 0), room_width, room_length, fill=None))
+    # Plot the room as a rectangle
+    plt.gca().add_patch(plt.Rectangle((0, 0), room_width, room_length, fill=None))#
+    #Plot fan position
     plt.scatter(room_width-FAN_POSITION[0],FAN_POSITION[1], color='brown')
     plt.text(int(room_width-FAN_POSITION[0]), int(FAN_POSITION[1]), "FAN", fontsize=9, ha='right', va='bottom')
-    # Plot the room as a rectangle
     
+    #Set of colors used for representing different user ids
     colors = ['red', 'green', 'yellow', 'purple','black'] 
-    # Plot the current position of the marker
+    # Plot the current position of the markers
     for person, color in zip(persons,colors):
         X=room_width-person.x
         Y=person.y
         plt.scatter(X,Y, color=color)
         plt.text(int(X), int(Y), person.id, fontsize=9, ha='right', va='bottom')
 
+    #Plot BLE position
     if ble_position is not None:
         plt.scatter(room_width-ble_position[0],ble_position[1],color='blue')
         plt.text(int(room_width-ble_position[0]), int(ble_position[1]), "BLE", fontsize=9, ha='right', va='bottom')
-    #position_square[1]=room_length-position_square[1]
     
     #plt.scatter(*position_square, color='green')
 
@@ -223,7 +226,7 @@ def plot_room(persons,ble_position=None):
     plt.pause(0.1)  # pause to allow the figure to update
 
 def plot_boxes(results, img) :
-    
+    """Function to get bouding box infos"""
     detections = []
     for r in results:
         boxes = r. boxes
@@ -239,13 +242,16 @@ def plot_boxes(results, img) :
     return detections, img
 
 def d_points(x1,y1,x2,y2):
+    #Calculation of distance between two points
     return np.sqrt((x2-x1)**2+(y2-y1)**2)
 
 def closest_person(persons, position):
+    #Returns the closest person to the BLE position
     return min(persons, key=lambda f: d_points(f.x,f.y,position[0],position[1]))
 
 
 def fetch_image(client_socket, data, payload_size):
+    #Function to fetch a frame from the raspberrypi camera
     while len(data) < payload_size:
         packet = client_socket.recv(480*640)  # Exact shape of the image from the camera
         if not packet: break
@@ -263,9 +269,10 @@ def fetch_image(client_socket, data, payload_size):
     return frame, data
 
 def locate_now(frame,plot=True):
+    #Single execution function to return all Person objects found in a frame
 
+    #Running YOLOv8 model with tracking and pose
     results = model.track(frame, tracker="IPS/tracker_modified.yaml",persist=True, verbose=False)
-    #detections, frame=plot_boxes(results,frame)
     bboxes = results[0].boxes.xyxy.tolist() #Accessing the bounding boxes
 
     keypoints=results[0].keypoints.xy.tolist() #Accessing the pose estimated keypoints
@@ -273,9 +280,7 @@ def locate_now(frame,plot=True):
         ids=results[0].boxes.id.int().cpu().tolist()
     else:
         ids=[]
-    #is_sitting(keypoints,bboxes,frame)
     frame,persons=locate_from_homography(bboxes,frame,keypoints,ids) #run the localization functions
-    #frame=locate_ml(bboxes, frame)
     annotated_frame = results[0].plot(kpt_radius=1,kpt_line=False) #Plot the bounding box and the pose
     if plot==True:
         cv2.imshow("Received", annotated_frame) #Open window to display
@@ -283,6 +288,7 @@ def locate_now(frame,plot=True):
     return persons
 
 def evaluate_mv_error(current_x,current_y):
+    """Function to calculate the error of MV positioning"""
     client_socket, data, payload_size = camera_connect()
     dict={}
     for i in range(50):
@@ -294,13 +300,14 @@ def evaluate_mv_error(current_x,current_y):
         for person in persons:
             if person.id not in dict:
                 dict[person.id] = []
-            dict[person.id].append((person.x, person.y))
+            dict[person.id].append((person.x, person.y),(current_x, current_y))
 
     df = pd.DataFrame({key: pd.Series(value) for key, value in dict.items()})
 
     return df
 
 def mv_positioning(shared_data, plot=False):
+    """Main function to run MV positioning"""
     client_socket, data, payload_size = camera_connect()
     while True:
         frame, data=fetch_image(client_socket=client_socket, data=data, payload_size=payload_size)
@@ -315,6 +322,7 @@ def mv_positioning(shared_data, plot=False):
 
 # Connect to the Raspberry Pi server
 def init_connect_fan():
+
     client_socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket2.connect(('192.168.137.32', 12346))  
     return client_socket2
@@ -323,6 +331,7 @@ def init_connect_fan():
 
 
 def match_id(shared_data):
+    #Get a match between BLE and MV positions
     matched= closest_person(shared_data['MV'],shared_data['BLE'])
     print(f'A match has been found with person {matched}')
     return matched

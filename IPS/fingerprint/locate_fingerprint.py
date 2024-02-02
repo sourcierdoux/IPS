@@ -32,7 +32,10 @@ async def scan():
     distance_list=[]
     for address in list_addresses:
         device = await BleakScanner.find_device_by_address(address, timeout=5)
-        distance_list.append(device.rssi)
+        if device is not None:
+            distance_list.append(device.rssi)
+        else:
+            distance_list.append(127)
     return np.array(distance_list)
 
 

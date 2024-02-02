@@ -72,10 +72,12 @@ def kalman_filter(signal_value, last_value, A, H, Q, R):
 
 
 def d_from_rssi(rssi, beacon):
+    #Distance calculation
     distance = np.power(10,((beacon.power_ref - rssi)/(10*N)))
     return distance
 
 def loop_signal(iterations: int, list_beacons: 'list[beacon]', last_values, current_position=False, plot=True):
+    """Main function to loop scanning"""
     positions_list=np.array([]).reshape(0,2)
     n_beacons=len(list_beacons)
     x_current=0
@@ -110,8 +112,6 @@ def loop_signal(iterations: int, list_beacons: 'list[beacon]', last_values, curr
 
         distances = np.array([b.d_2D for b in three_selected_beacons])
         x,y=select_case(three_selected_beacons[0],three_selected_beacons[1],three_selected_beacons[2])
-        #print("\nCurrent position is:")
-        #print(x,y)
         positions_list=np.append(positions_list,[(x,y)],axis=0)
         #x_square, y_square=locate_square(b1,b2,b3,distances)
         x_weight,y_weight=locate_weight(three_selected_beacons[0],three_selected_beacons[1],three_selected_beacons[2])
@@ -127,6 +127,7 @@ def loop_signal(iterations: int, list_beacons: 'list[beacon]', last_values, curr
 
 
 async def discover(list_beacons):
+    """Scanning function"""
     distance_list=[]
     for beacon in list_beacons:
         device = await BleakScanner.find_device_by_address(beacon.address,timeout=5)
@@ -135,7 +136,10 @@ async def discover(list_beacons):
         else:
             distance_list.append(-100)
     return np.array(distance_list)
+
+
 def run_discover_mean(list_beacons: 'list[beacon]'):
+    """Function to perform moving average when scanning"""
     n_beacons=len(list_beacons)
     array_average=np.array([]).reshape(0,n_beacons)
     for i in range(0,2):
@@ -150,6 +154,7 @@ def run_discover_mean(list_beacons: 'list[beacon]'):
 
 
 def run_hypot(beacon_list: 'list[beacon]'):
+    """Function to performn dimensional reduction """
     for b in beacon_list:
         b.d_2D=b.d_to_user
         """if ((b.d_to_user<ceiling_height)):
@@ -160,6 +165,7 @@ def run_hypot(beacon_list: 'list[beacon]'):
   
 
 def init_loop(list_beacons: 'list[beacon]'):
+    """Function to obtain initial values for the Kalman filter"""
     n_beacons=len(list_beacons)
     signal=np.array([]).reshape(0,n_beacons)
     signal_no_filter=np.array([]).reshape(0,n_beacons)
@@ -177,5 +183,6 @@ def init_loop(list_beacons: 'list[beacon]'):
 
 
 def select_three(list_beacons: 'list[beacon]'):
+    """Function to select the three closest beacons"""
     selected_beacons=sorted(list_beacons,key=lambda x: x.d_to_user)[:3]
     return selected_beacons

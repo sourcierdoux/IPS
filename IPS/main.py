@@ -73,7 +73,7 @@ def follow(shared_data,first_position,client_socket2):
         if np.abs(first_angle-angle_to_person)>7:
             send_to_fan(person=person_to_follow,client_socket2=client_socket2)
             first_position=person_to_follow
-        time.sleep(5)
+        time.sleep(3)
 
         
 
@@ -98,6 +98,7 @@ def tracking_full(ble_ips='trilateration'):
     thread_ble.join()
     print("finished locating BLE")
     threading.Thread(target=run_app, daemon=True).start()
+    send_to_fan_speed()
     if 'MV' in shared_data and 'BLE' in shared_data:
         person_to_follow=match_id(shared_data)
         first_position=person_to_follow
@@ -116,11 +117,11 @@ def tracking_full(ble_ips='trilateration'):
 
 def main():
     #mv_positioning(shared_data=None,plot=True) #MV positioning only
-    #locate_fingerprint(shared_data=None,plot_final=True) #Fingerprinting positioning only
-    #locate_ble(plot=False,shared_data=None,current_position=False,final_plot=True, n_measurement=10) #BLE trilateration only
+    locate_fingerprint(shared_data=None,plot_final=True) #Fingerprinting positioning only
+    #locate_ble(plot=True,shared_data=None,current_position=True,final_plot=True, n_measurement=10) #BLE trilateration only
     
     #Uncomment next line for enabling all system (requiring running Pi scripts as well)
-    tracking_full(ble_ips='fingerprinting') 
+    #tracking_full(ble_ips='trilateration') 
 
 
     #Next lines are for evaluation of positioning errors

@@ -15,11 +15,14 @@ import pandas as pd
 
 
 
-#---MAIN---
 
-def locate_ble(shared_data,plot=False,n_measurement=20,current_position=False, final_plot=False):
+
+def locate_ble(shared_data,plot=False,n_measurement=10,current_position=False, final_plot=False):
+    #Main function for localizing using BLE
+
     print("Starting to locate with BLE")
-    #Define beacons
+
+    #Define beacons parameters
     b1 = beacon(x=4*0.6,y=4.5*0.6,address="BE891D8E-0B63-C9EB-AF08-EFA63E30A1FD",name="BLE6",power_ref=-40)
     b2 = beacon(x=9.5*0.6,y=4.5*0.6,address="CD3D8B09-2EAB-27E7-A67A-19263FE5369B",name="BLE2",power_ref=-40)
     b3 = beacon(x=6.5*0.6,y=9.5*0.6,address="33782DDB-6E6A-E7E6-1B45-45FFDC86CD72",name="BLE10",power_ref=-40)
@@ -29,8 +32,11 @@ def locate_ble(shared_data,plot=False,n_measurement=20,current_position=False, f
     ble2= beacon(x=1.2*0.6,y=1.2*0.6,address="47F437F8-0807-D40D-CDD7-1098351C398C", name="BLE_beacon_1",power_ref=-49)
     ble3= beacon(x=11.5*0.6, y=9.1*0.6, address="76F34488-4ECB-C658-B1F4-56C1AC9D741F", name="BLE_beacon_2",power_ref=-49)
 
+    #LOOP MEASUREMENTS AND CALCULATE POSITIONS
     signal, signal_no_filter, positions_list=loop_signal(iterations=n_measurement, list_beacons=[b1,b2,b3,b4,ble1,ble2,ble3], last_values=init_loop(list_beacons=[b1,b2,b3,b4,ble1,ble2,ble3]), current_position=current_position, plot=plot)
+    #signal and signal_no_filter are for plotting signals after scan
     #plot_signal(signal=signal, signal_no_filter=signal_no_filter, n_measurement=n_measurement)
+    
     avg_x,avg_y=np.ma.mean(np.ma.masked_equal(positions_list,0),axis=0)
     if shared_data is not None:
         shared_data['BLE']=(avg_x/0.6,avg_y/0.6)
@@ -41,6 +47,8 @@ def locate_ble(shared_data,plot=False,n_measurement=20,current_position=False, f
 
 
 def evaluate_trilateration_error(file=None):
+    """Function to calculate trilateration error based on two given coordinates x and y."""
+
     current_x=input("enter current x:")
     current_y=input("enter current y:")
     array_positions=np.array([]).reshape(0,4)
@@ -61,6 +69,8 @@ def evaluate_trilateration_error(file=None):
     return pd.DataFrame(array_positions,index=None,columns=['x_pred','y_pred','x_true','y_true'])
 
 def plot_final_trilat(pos):
+    """Function used to plot the final trilaterated position"""
+
     camera_position = (2.5, 15.5)
     room_width = 12
     room_length = 17
