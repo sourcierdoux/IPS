@@ -1,6 +1,4 @@
-useless_stuff/
 ipsvision/
-utility/
 .venv/
 .DS_Store
 __pycache__/
